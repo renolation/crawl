@@ -3,6 +3,8 @@ import { TruyenService } from './truyen.service';
 import { CreateTruyenDto } from './dto/create-truyen.dto';
 import { UpdateTruyenDto } from './dto/update-truyen.dto';
 import {CreateStoryDto} from "./dto/create-story.dto";
+import {CreateCategoryDto} from "./dto/create-category.dto";
+import {CreateChapterDto} from "./dto/create-chapter.dto";
 
 @Controller('truyen')
 export class TruyenController {
@@ -14,8 +16,18 @@ export class TruyenController {
   }
 
   @Post('/create-story')
-  async createStory(@Body() createStoryDto: any) {
+  async createStory(@Body() createStoryDto: CreateStoryDto) {
     await this.truyenService.createStory(createStoryDto);
+  }
+
+  @Post('/create-category')
+  async createCategory(@Body() createCategoryDto: CreateCategoryDto) {
+    await this.truyenService.createCategory(createCategoryDto);
+  }
+
+  @Post('/create-chapter')
+  async createChapter(@Body() createChapterDto: CreateChapterDto) {
+    await this.truyenService.createChapter(createChapterDto);
   }
 
   @Get()

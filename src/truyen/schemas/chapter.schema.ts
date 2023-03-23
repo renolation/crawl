@@ -9,9 +9,8 @@ export class Chapter {
     @Prop({unique: true, required: true})
     header: string;
 
-    @Prop({ type:  mongoose.Schema.Types.ObjectId, ref: 'Story', required: true })
+    @Prop({ type:  String, ref: 'Story', required: true })
     fromStory: string;
-
 
     @Prop({ required: true })
     body: any[];
