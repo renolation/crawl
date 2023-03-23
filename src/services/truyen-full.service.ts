@@ -128,4 +128,138 @@ export class TruyenFullService{
             console.log();
         }
     }
+
+    async getLastChapterIndexStory(title) {
+        try {
+            const response = await axios.get(`${truyenFullURL}${title}`, axiosParams);
+            const html = response.data;
+            const $ = cheerio.load(html);
+
+            // const res = await https.get(`${truyenFullURL}${title}`);
+            const ele = parser.parseFromString('res.text', 'text/html');
+            const dom = new JSDOM(ele.rawHTML);
+
+            // const domInfoArray = Array.from(dom.window.document
+            //     .getElementsByClassName('info')[0]
+            //     .getElementsByTagName('div'));
+            // const status = dom.window.document
+            //     .getElementsByClassName('info')[0]
+            //     .getElementsByTagName('div')[domInfoArray.length - 1]
+            //     .getElementsByTagName('span')[0].innerHTML.normalize();
+            const infoArray = Array.from($('.info').eq(0).find('div'));
+            const status = $('.info').eq(0).find('div').eq(infoArray.length-1).find('span').eq(0).text().normalize();
+
+
+
+            if (status == 'Full') {
+                // const domPaginationArray1 = Array.from(dom.window.document
+                //     .getElementsByClassName('pagination pagination-sm')[0]
+                //     .getElementsByTagName('li'));
+                // const lastPageURL1 = domPaginationArray[domPaginationArray.length - 2]
+                //     .getElementsByTagName('a')[0]
+                //     .getAttribute('href');
+
+                const domPaginationArray = Array.from($('.pagination.pagination-sm').eq(0)
+                    .find('li')
+                );
+                const lastPageURL = $(domPaginationArray[domPaginationArray.length - 2]).find()
+                    .find('a').attr('href');
+
+                try {
+                    const res2 = await axios.get(`${lastPageURL}`);
+                    const html2 = res2.data;
+                    const $$ = cheerio.load(html2);
+
+                    // const domListChapterArray1 = Array.from(dom2.window.document
+                    //     .getElementsByClassName('list-chapter')[0]
+                    //     .getElementsByTagName('li'));
+                    //
+                    // const lastChapterIndex1 = domListChapterArray[domListChapterArray.length - 1]
+                    //     .getElementsByTagName('a')[0]
+                    //     .getAttribute('href')
+                    //     .split('chuong-')[1]
+                    //     .replace('/','');
+
+                    const domListChapterArray = $$('.list-chapter').eq(0)
+                        .find('li');
+                    const lastChapterIndex = $$(domListChapterArray[domListChapterArray.length -1])
+                        .find('a').eq(0)
+                        .attr('href')
+                        .split('chuong-')[1]
+                        .replace('/','');
+
+
+                    return lastChapterIndex;
+                } catch (err) {
+                    console.log(err)
+                }
+            }
+            else if (status != 'Full'){
+                // const domListChapterArray1 = Array.from(dom.window.document
+                //     .getElementsByClassName('l-chapters')[0]
+                //     .getElementsByTagName('li'));
+                //
+                // const lastChapterIndex1 = domListChapterArray[0]
+                //     .getElementsByTagName('a')[0]
+                //     .getAttribute('href')
+                //     .split('chuong-')[1]
+                //     .replace('/','');
+
+                const domListChapterArray = Array.from($('.l-chapters').eq(0)
+                    .find('li'));
+
+                const lastChapterIndex = $(domListChapterArray[0]).find('a').eq(0)
+                    .attr('href')
+                    .split('chuong-')[1]
+                    .replace('/','');
+
+                return lastChapterIndex;
+            }
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
+    async crawl1Chapter(title, index) {
+        try {
+            const response = await axios.get(`${truyenFullURL}${title}/chuong-${index}/`, axiosParams);
+            const html = response.data;
+            const $ = cheerio.load(html);
+            // const header1 = dom.window.document.getElementsByClassName('chapter-title')[0].getAttribute("title")
+            //     .split('- ')[1];
+
+            const header = $('.chapter-title').eq(0).attr('title').split('- ')[1];
+
+            //replace all <br> tags to '<<' to split the paragraph easier
+            // const body1 = dom.window.document.getElementsByClassName('chapter-c')[0].innerHTML
+            //     .replace(/<i>|<\/i>|<b>|<\/b>/g, '')
+            //     .replace(/<br>&nbsp;<br>/g, '<<')
+            //     .replace(/<br><br>/g, '<<')
+            //     .split('<<');
+
+            const body = $('.chapter-c').eq(0).text()
+                .replace(/<i>|<\/i>|<b>|<\/b>/g, '')
+                .replace(/<br>&nbsp;<br>/g, '<<')
+                .replace(/<br><br>/g, '<<')
+                .split('<<');
+
+
+            console.log(`Đang tải ${title} chương ${index}...`);
+
+            return ({
+                header: header,
+                body: body,
+            });
+        } catch (err) {
+            if (err.status == 503) {
+                console.log('Too many requests!');
+            }
+            else if (err.status == 404) {
+                console.log(`Story ${title} not found!`);
+            }
+            else {
+                console.log(err);
+            }
+        }
+    }
 }

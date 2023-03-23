@@ -1,18 +1,29 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+} from '@nestjs/common';
 import { TruyenService } from './truyen.service';
 import { CreateTruyenDto } from './dto/create-truyen.dto';
 import { UpdateTruyenDto } from './dto/update-truyen.dto';
-import {CreateStoryDto} from "./dto/create-story.dto";
-import {CreateCategoryDto} from "./dto/create-category.dto";
-import {CreateChapterDto} from "./dto/create-chapter.dto";
-import {TruyenFullService} from "../services/truyen-full.service";
-import {Story, StorySchema} from "./schemas/story.schema";
+import { CreateStoryDto } from './dto/create-story.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { CreateChapterDto } from './dto/create-chapter.dto';
+import { TruyenFullService } from '../services/truyen-full.service';
+import { Story, StorySchema } from './schemas/story.schema';
+import axios from 'axios';
+import { axiosParams, sleep } from '../core/helper';
+import { Chapter } from './schemas/chapter.schema';
 
 @Controller('truyen')
 export class TruyenController {
   constructor(
-      private readonly truyenService: TruyenService,
-      private readonly truyenFullService: TruyenFullService
+    private readonly truyenService: TruyenService,
+    private readonly truyenFullService: TruyenFullService,
   ) {}
 
   @Post()
@@ -23,7 +34,7 @@ export class TruyenController {
   //region create
   @Post('/create-story')
   async createStory(@Body() createStoryDto: CreateStoryDto) {
-    let newStory : Story = {
+    let newStory: Story = {
       title: createStoryDto.title,
       author: createStoryDto.author,
       description: createStoryDto.description,
@@ -47,13 +58,16 @@ export class TruyenController {
 
   @Get('/crawlStoryByCategory')
   async crawlStoryByCategory() {
-    const stories = await this.truyenFullService.crawl1PageOfCategory('kiem-hiep', 2);
+    const stories = await this.truyenFullService.crawl1PageOfCategory(
+      'kiem-hiep',
+      2,
+    );
 
     for (const story of stories) {
-      if(story == null){
+      if (story == null) {
         continue;
       }
-      let newStory : Story = {
+      let newStory: Story = {
         title: story.title,
         author: story.author,
         description: story.description,
@@ -62,7 +76,7 @@ export class TruyenController {
         status: story.status,
       };
       try {
-        await this.truyenService.createStory(newStory)
+        await this.truyenService.createStory(newStory);
       } catch (error) {
         if (error.code === 11000) {
           // Duplicate key error, handle it appropriately
@@ -73,20 +87,71 @@ export class TruyenController {
           throw error;
         }
       }
-
     }
     return 'done';
   }
 
   @Get('/getStoryInfo')
-  async getStoryInfo(@Body() body: any){
+  async getStoryInfo(@Body() body: any) {
     const story = await this.truyenFullService.crawlStoryInfo(body.url);
     return story;
   }
 
   @Get()
-  findAll() {
-    return this.truyenService.findAll();
+  async findAll() {
+    const response = await axios.get(
+      'https://httpbin.org/headers',
+      axiosParams,
+    );
+    console.log(response.data);
+  }
+
+  @Get('/get-last-chapter')
+  async getLastChapter(@Body() body: any) {
+    const response = await this.truyenFullService.getLastChapterIndexStory(
+      body.title,
+    );
+    return response;
+  }
+
+  @Get('/get-all-chapter')
+  async getAllChapter(@Body() body: any) {
+    const lastChapter = await this.truyenFullService.getLastChapterIndexStory(
+      body.title,
+    );
+    console.log(`chapter: ${lastChapter}`);
+    for (let i = 1; i <= Number(lastChapter); i++) {
+      let chapter = await this.truyenFullService.crawl1Chapter(body.title, i);
+
+      // if (i % 3 == 0) {
+      await sleep(1200);
+      // }
+
+      if (chapter == null) {
+        break;
+      } else {
+        let newChapter: Chapter = {
+          header: chapter.header,
+          fromStory: body.title,
+          body: chapter.body,
+        };
+
+        try {
+          await this.truyenService.createChapter(newChapter);
+        } catch (error) {
+          if (error.code === 11000) {
+            // Duplicate key error, handle it appropriately
+            console.log('Skipping duplicate key error');
+
+          } else {
+            // Other error, re-throw it
+            throw error;
+          }
+          continue;
+        }
+      }
+    }
+    return 'done';
   }
 
   @Get(':id')
