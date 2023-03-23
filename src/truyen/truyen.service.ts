@@ -23,7 +23,7 @@ export class TruyenService {
     return 'This action adds a new truyen';
   }
 
-  async createStory(createStoryDto: CreateStoryDto): Promise<Story> {
+  async createStory(createStoryDto: Story): Promise<Story> {
     const createdStory = await this.storyModel.create(createStoryDto);
     return createdStory;
   }
