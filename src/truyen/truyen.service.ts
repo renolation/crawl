@@ -38,6 +38,8 @@ export class TruyenService {
     return createdChapter;
   }
 
+
+
   findAll() {
     return `This action returns all truyen`;
   }

@@ -35,6 +35,7 @@ export class TruyenFullService{
             for (const node of nodeListArray) {
                 const storyURL = $(node).find('.truyen-title').eq(0).find('a').eq(0).attr('href');
                 console.log(storyURL);
+                if(storyURL==null) continue;
                 const story = await this.crawlStoryInfo(storyURL);
 
                 storyList1Page.push(story)
@@ -261,5 +262,81 @@ export class TruyenFullService{
                 console.log(err);
             }
         }
+    }
+
+    async crawlMultipleChapters(title, beginChap, endChap) {
+        let chapterList = [];
+        for (var i = beginChap; i <= endChap; i++) {
+            let chapter = await this.crawl1Chapter(title, i);
+
+            if (i % 3 == 0) {
+                await sleep(3000);
+            }
+
+            if (chapter == null) {
+                break;
+            }
+            else {
+                chapterList.push(chapter);
+            }
+        }
+
+        return chapterList;
+    }
+
+    async getLastPageIndexCategory(category) {
+        let page = 1;
+        try {
+            const response = await axios.get(`${truyenFullURL}the-loai/${category}/trang-${page}/`, axiosParams);
+            const html = response.data;
+            const $ = cheerio.load(html);
+
+            //list all nodes with <li> tag in HTML
+            // const liTagsHTML1 = dom.window.document.getElementsByTagName('li');
+            const liTagsHTML = $('.pagination.pagination-sm').find('li');
+            //convert HTML collection to Array
+            const liTagsArray = Array.from(liTagsHTML);
+            //find the node[-4] of the list to check lastPageIndex
+            // let lastPageIndex1 = liTagsArray[liTagsArray.length - 4].getElementsByTagName('a')[0]
+            //     .getAttribute('title')
+            //     .split('Trang ')[1]
+
+            let lastPageIndex = $(liTagsArray[liTagsArray.length-2]).find('a')
+                .attr('href')
+                .split(`https://truyenfull.vn/the-loai/${category}/trang-`)[1]
+                .split('/')[0];
+            console.log(lastPageIndex);
+            return Number(lastPageIndex);
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
+    async crawlAllPagesOfCategory(category) {
+        let lastPageIndex = null;
+        try {
+            lastPageIndex = await this.getLastPageIndexCategory(category);
+        } catch (err) {
+            console.log(err);
+        }
+
+        let storyListAllPages = [];
+        try {
+            for (let i = 1; i <= lastPageIndex; i++) {
+                let newPage = await this.crawl1PageOfCategory(category, i)
+                if (i % 5 == 0) {
+                    await sleep(500);
+                }
+
+                for (const story of newPage) {
+                    storyListAllPages.push(story);
+                }
+            }
+        } catch (err) {``
+            console.log(err);
+        }
+
+        console.log(`==> Tổng cộng có ${storyListAllPages.length} truyện thuộc thể loại ${category}`);
+        return storyListAllPages;
     }
 }

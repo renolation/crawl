@@ -154,6 +154,48 @@ export class TruyenController {
     return 'done';
   }
 
+  @Get('/get-all-story-by-category')
+  async getAllStoryByCategory(@Body() body: any) {
+    // return await this.truyenFullService.getLastPageIndexCategory(body.category);
+    let crawlResult = await this.truyenFullService.crawlAllPagesOfCategory(body.category);
+    for (const story of crawlResult) {
+      // const newStory = new Story({
+      //   "title": story.title,
+      //   "author": story.author,
+      //   "description": story.description,
+      //   "poster": story.poster,
+      //   "categoryList": story.categoryList,
+      //   "status": story.status,
+      // });
+
+      let newStory: Story = {
+        "title": story.title,
+        "author": story.author,
+        "description": story.description,
+        "poster": story.poster,
+        "categoryList": story.categoryList,
+        "status": story.status,
+      };
+
+      try {
+        await this.truyenService.createStory(newStory);
+      } catch (error) {
+        if (error.code === 11000) {
+          // Duplicate key error, handle it appropriately
+          console.log('Skipping duplicate key error');
+          continue;
+        } else {
+          // Other error, re-throw it
+          throw error;
+        }
+      }
+    }
+
+    return `done ${crawlResult.length}`;
+
+  }
+
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.truyenService.findOne(+id);
