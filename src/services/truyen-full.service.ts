@@ -367,4 +367,56 @@ export class TruyenFullService{
         }
     }
 
+    //region new
+
+    async getUrlChapter1(title){
+        const response = await axios.get(`${truyenFullURL}${title}`, axiosParams);
+        const html = response.data;
+        const $ = cheerio.load(html);
+
+        let url = $('.list-chapter').eq(0)
+            .find('li').eq(0)
+            .find('a').eq(0)
+            .attr('href');
+        return url;
+    }
+
+
+    async crawl1ChapterNew(url) {
+        try {
+            const response = await axios.get(url, axiosParams);
+            const html = response.data;
+            const $ = cheerio.load(html);
+
+            const header = $('.chapter-title').eq(0).attr('title').split('- ')[1];
+
+            const body = $('.chapter-c').eq(0).text()
+                .replace(/<i>|<\/i>|<b>|<\/b>/g, '')
+                .replace(/<br>&nbsp;<br>/g, '<<')
+                .replace(/<br><br>/g, '<<')
+                .split('<<');
+            let urlNextChapter = $('#next_chap').attr('href');
+            console.log(`next chapter ${urlNextChapter}`);
+            console.log(`Đang tải ${url}...`);
+
+            return ({
+                header: header,
+                body: body,
+                urlNextChapter: urlNextChapter,
+            });
+        } catch (err) {
+            if (err.status == 503) {
+                console.log('Too many requests!');
+            }
+            else if (err.status == 404) {
+                console.log(`Story ${url} not found!`);
+            }
+            else {
+                console.log(err);
+            }
+        }
+    }
+
+    //endregion
+
 }

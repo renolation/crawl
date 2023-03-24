@@ -5,7 +5,7 @@ import {
   Body,
   Patch,
   Param,
-  Delete,
+  Delete, Query,
 } from '@nestjs/common';
 import { TruyenService } from './truyen.service';
 import { CreateTruyenDto } from './dto/create-truyen.dto';
@@ -18,6 +18,7 @@ import { Story, StorySchema } from './schemas/story.schema';
 import axios from 'axios';
 import { axiosParams, sleep } from '../core/helper';
 import { Chapter } from './schemas/chapter.schema';
+import {ApiQuery} from "@nestjs/swagger";
 
 @Controller('truyen')
 export class TruyenController {
@@ -107,15 +108,19 @@ export class TruyenController {
   }
 
   @Get('/get-last-chapter')
-  async getLastChapter(@Body() body: any) {
+  @ApiQuery({ name: 'title' })
+  async getLastChapter(
+      @Query('title') title: string,
+  ) {
     const response = await this.truyenFullService.getLastChapterIndexStory(
-      body.title,
+      title,
     );
     return response;
   }
 
   @Get('/get-all-chapter')
-  async getAllChapter(@Body() body: any) {
+  async getAllChapter(@Body() body: any)
+  {
     const lastChapter = await this.truyenFullService.getLastChapterIndexStory(
       body.title,
     );
@@ -152,6 +157,56 @@ export class TruyenController {
       }
     }
     return 'done';
+  }
+
+  @Get('/get-all-chapter-new')
+  @ApiQuery({ name: 'title' })
+  async getAllChapterNew(
+      @Query('title') title: string,
+  )
+  {
+    console.log(title);
+    let firstChapterUrl= await  this.truyenFullService.getUrlChapter1(title);
+
+    let chapterData = await this.truyenFullService.crawl1ChapterNew(firstChapterUrl);
+    console.log(chapterData);
+    //insert database
+    let newChapter: Chapter = {
+      header: chapterData.header,
+      fromStory: title,
+      body: chapterData.body,
+    };
+    await this.insertChapter(newChapter);
+    while(chapterData.urlNextChapter != 'javascript:void(0)'){
+      console.log('insert data');
+       chapterData = await this.truyenFullService.crawl1ChapterNew(chapterData.urlNextChapter);
+      //insert database
+
+      let newChapter: Chapter = {
+        header: chapterData.header,
+        fromStory: title,
+        body: chapterData.body,
+      };
+      await this.insertChapter(newChapter);
+
+    }
+  }
+  async insertChapter(chapter: Chapter){
+
+
+    try {
+      await this.truyenService.createChapter(chapter);
+    } catch (error) {
+      if (error.code === 11000) {
+        // Duplicate key error, handle it appropriately
+        console.log('Skipping duplicate key error');
+
+      } else {
+        // Other error, re-throw it
+        throw error;
+      }
+
+    }
   }
 
   @Get('/get-all-story-by-category')
@@ -199,6 +254,13 @@ export class TruyenController {
   @Get('/get-all-category')
     async getAllCategory(){
       return this.truyenFullService.crawlCategoryList();
+  }
+
+  @Get('/get-1-chapter')
+  async get1Chapter(@Body() body: any) {
+    let chapter = await this.truyenFullService.crawl1Chapter(body.title, body.chapter);
+    return `${chapter.body}`;
+
   }
 
   @Get(':id')

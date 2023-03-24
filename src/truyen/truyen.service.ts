@@ -35,6 +35,7 @@ export class TruyenService {
 
   async createChapter(createChapterDto: CreateChapterDto): Promise<Chapter> {
     const createdChapter = await this.chapterModel.create(createChapterDto);
+    console.log(createChapterDto.fromStory);
     return createdChapter;
   }
 
