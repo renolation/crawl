@@ -339,4 +339,32 @@ export class TruyenFullService{
         console.log(`==> Tổng cộng có ${storyListAllPages.length} truyện thuộc thể loại ${category}`);
         return storyListAllPages;
     }
+
+
+    async crawlCategoryList() {
+        let list = [];
+        try {
+            const response = await axios.get(`${truyenFullURL}`);
+            const html = response.data;
+            const $ = cheerio.load(html);
+
+            // const domHTMLArray1 = Array.from(dom.window.document
+            //     .getElementsByClassName('list list-truyen list-cat col-xs-12')[0]
+            //     .getElementsByClassName('col-xs-6'))
+
+            const  domHTMLArray = Array.from($('.list.list-truyen.list-cat.col-xs-12').eq(0).find('.col-xs-6'));
+
+            // list = domHTMLArray.map((dom) => {
+            //     return dom.getElementsByTagName('a')[0].innerHTML.normalize();
+            // })
+            list = domHTMLArray.map((dom) => {
+                return $(dom).find('a').eq(0).text().normalize();
+            })
+
+            return list;
+        } catch (err) {
+            console.log(err);
+        }
+    }
+
 }

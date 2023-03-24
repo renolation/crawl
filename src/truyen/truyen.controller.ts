@@ -196,6 +196,11 @@ export class TruyenController {
   }
 
 
+  @Get('/get-all-category')
+    async getAllCategory(){
+      return this.truyenFullService.crawlCategoryList();
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.truyenService.findOne(+id);
